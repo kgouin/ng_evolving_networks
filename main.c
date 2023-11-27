@@ -4,7 +4,7 @@
 #include <sys/time.h>
 
 void init(int, int, int, double, double, int, int***, int***);
-void ng(int, int, int, int, int***, int***, int);
+void ng(int, int, int, int, int***, int***, int, int);
 void rewire(int, int, int, int, int***, int***, int);
 //void modify(int, int, int, int, int***, int***, double, double, double);
 void write_to_file(int, int, int***, int***);
@@ -56,9 +56,9 @@ void init(int c, int k, int n, double p, double q, int opinions, int*** adj_matr
 
 }
 
-void ng(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion_matrix, int rewire_strength){
+void ng(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion_matrix, int num_iterations, int rewire_strength){
 
-	for (k = 0; k < n*n; k++){
+	for (k = 0; k < num_iterations; k++){
 		//play the naming game
 		int speaker = rand() % n;	//pick a random vertex as speaker (uniformity is not perfect, but it's good enough for our purposes)
 
@@ -136,8 +136,12 @@ void ng(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion_mat
 
 		rewire(c, k, n, opinions, adj_matrix, opinion_matrix, rewire_strength);
 
-		write_to_file(n, opinions, adj_matrix, opinion_matrix);
+		if (k >= n && k % n == 0){ //write to file every n iterations
+			write_to_file(n, opinions, adj_matrix, opinion_matrix);
+		}
 	}
+
+	write_to_file(n, opinions, adj_matrix, opinion_matrix); //write final arrangements to file
 
 }
 
@@ -214,8 +218,8 @@ void rewire(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion
 		//pick a random pair from eligible_for_edge_addition
 		int pair_to_add = rand() % num_eligible_pairs_addition;
 		//add the edge by changing adj_matrix at the two appropriate indices
-		(*adj_matrix)[eligible_for_edge_addition[pair_to_add][0]][eligible_for_edge_addition[pair_to_add][1]] = 0;
-		(*adj_matrix)[eligible_for_edge_addition[pair_to_add][1]][eligible_for_edge_addition[pair_to_add][0]] = 0;
+		(*adj_matrix)[eligible_for_edge_addition[pair_to_add][0]][eligible_for_edge_addition[pair_to_add][1]] = 1;
+		(*adj_matrix)[eligible_for_edge_addition[pair_to_add][1]][eligible_for_edge_addition[pair_to_add][0]] = 1;
 	}
 
 	//we'll have to think of a way to handle vertices with number of non -1 opinions which is less than rewire_strength
@@ -253,219 +257,6 @@ void rewire(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion
 	free(eligible_for_edge_addition);
 
 }
-
-/*void modify(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion_matrix, double prob_link, double prob_drop, double prob_none){
-
-	//modify the given adjacency matrix by adding or dropping a link between two vertices based upon their shared opinions
-
-	int v = rand() % n; //pick a random vertex
-
-	int possible_candidates = 0;
-	int disqualified = 0;
-	int qualified = 0;
-
-	//printf("RAND_MAX = %d\n", RAND_MAX); //these look good
-	//printf("(double)RAND_MAX = %f\n", (double)RAND_MAX); //these look good
-
-	double prob = (double)rand()/(double)(RAND_MAX); //random number between 0 and 1
-	//printf("prob = %f\n", prob); //these look good
-	//printf("prob_link = %f\n", prob_link); //these look good
-	//printf("prob_drop = %f\n", prob_drop); //these look good
-
-	if (prob > 1 || prob < 0){
-		printf("---- exit 04 ----\n");
-		//prob should be between 0 and 1
-		exit(0);
-	}
-	
-	//printf("prob_link < prob_drop: %f < %f\n", prob_link, prob_drop); //these look good
-	//printf("prob_drop < prob_link: %f < %f\n", prob_drop, prob_link); //these look good
-
-	double case_link = -1;
-	double case_drop = -1;
-	double case_none = -1;
-
-	//setup for probability check
-	int possibility = -1;
-	if (prob_link < prob_drop < prob_none){
-		possibility = 1;
-		case_link = prob_link;
-		case_drop = prob_link + prob_drop;
-		case_none = 1;
-	}
-	else if (prob_drop < prob_link < prob_none){
-		possibility = 2;
-		case_drop = prob_drop;
-		case_link = prob_drop + prob_link;
-		case_none = 1;
-	}
-	else if (prob_link < prob_none < prob_drop){
-		possibility = 3;
-		case_link = prob_link;
-		case_none = prob_link + prob_none;
-		case_drop = 1;
-	}
-	else if (prob_drop < prob_none < prob_link){
-		possibility = 4;
-		case_drop = prob_drop;
-		case_none = prob_drop + prob_none;
-		case_link = 1;
-	}
-	else if (prob_none < prob_link < prob_drop){
-		possibility = 5;
-		case_none = prob_none;
-		case_link = prob_none + prob_link;
-		case_drop = 1;
-	}
-	else if (prob_none < prob_drop < prob_link){
-		possibility = 6;
-		case_none = prob_none;
-		case_drop = prob_none + prob_drop;
-		case_link = 1;
-	}
-	else {
-		printf("---- exit 05 ----\n");
-		//there shouldn't be any more cases
-		exit(0);
-	}
-
-	if (case_link == -1 || case_drop == -1 || case_none == -1 || possibility == -1){
-		printf("---- exit 06 ----\n");
-		//these values should have changed
-		exit(0);
-	}
-
-	if ((possibility == 1 && prob < case_link) || (possibility == 2 && prob > case_drop && prob < case_link) ||
-		(possibility == 3 && prob < case_link) || (possibility == 4 && prob > case_drop && prob > case_none) ||
-		(possibility == 5 && prob > case_none && prob < case_link) || (possibility == 6 && prob > case_none && prob > case_drop)){
-		//with probability prob_link, we add a link between previously unlinked nodes iff they share at least 1 common opinion
-		printf("modify: add a link\n");
-		for (int i = 0; i < n; i++){ //go through v's neighbours
-			if ((*adj_matrix)[v][i] == 0){ //if we find a non-neighbour
-				for (int j = 0; j < opinions; j++){ //look through v's opinions
-					for (int k = 0; k < opinions; k++){ //look through v's non-neighbour's opinions
-						if ((*opinion_matrix)[v][j] == (*opinion_matrix)[v][k]){ //if they share an opinion
-							qualified = 1;
-						}
-					}
-				}
-				if (qualified){
-					possible_candidates++;
-					qualified = 0;
-				}
-			}
-		}
-		//now we have a count of possible candidates
-		if (possible_candidates == 0){
-			printf("modify: no eligible candidates to add a link\n");
-			exit(0);
-			return;
-		}
-		int neighbour = rand() % possible_candidates;
-		int count = 0;
-		for (int i = 0; i < n; i++){ //go through v's neighbours
-			if ((*adj_matrix)[v][i] == 0){ //if we find a non-neighbour
-				for (int j = 0; j < opinions; j++){ //look through v's opinions
-					for (int k = 0; k < opinions; k++){ //look through v's non-neighbour's opinions
-						if ((*opinion_matrix)[v][j] == (*opinion_matrix)[v][k]){ //if they share an opinion
-							qualified = 1;
-						}
-					}
-				}
-				if (qualified){
-					count++;
-					qualified = 0;
-				}
-				if ((count - 1) == neighbour){
-					if ((*adj_matrix)[v][i] == 1 || (*adj_matrix)[i][v] == 1){
-						printf("---- exit 07 ----\n");
-						exit(0);
-					}
-					(*adj_matrix)[v][i] = 1;
-					(*adj_matrix)[i][v] = 1;
-					return;
-				}
-			}
-		}
-	}
-
-	else if ((possibility == 1 && prob > case_link && prob < case_drop) || (possibility == 2 && prob < case_drop) ||
-		(possibility == 3 && prob > case_link && prob > case_none) || (possibility == 4 && prob < case_drop) ||
-		(possibility == 5 && prob > case_none && prob > case_link) || (possibility == 6 && prob > case_none && prob < case_drop)){
-		//with probability prob_drop, we remove a link between previously linked nodes iff they share no opinion in common
-		printf("modify: drop a link\n");
-		for (int i = 0; i < n; i++){ //go through v's neighbours
-			if ((*adj_matrix)[v][i] == 1){ //if we find a neighbour
-				for (int j = 0; j < opinions; j++){ //look through v's opinions
-					for (int k = 0; k < opinions; k++){ //look through v's neighbour's opinions
-						if ((*opinion_matrix)[v][j] == (*opinion_matrix)[v][k]){ //if they share an opinion
-							disqualified = 1;
-						}
-					}
-				}
-				if (!disqualified){
-					possible_candidates++;
-					disqualified = 0;
-				}
-			}
-		}
-		//now we have a count of possible candidates
-		if (possible_candidates != 0){
-			printf("*******************************************\n");
-			exit(0);
-		}
-		if (possible_candidates == 0){
-			printf("modify: no eligible candidates to drop a link\n"); //pas 100% confiante qu'il n'y a pas de candidats possibles...
-			for (int i = 0; i < n; i++){
-				for (int j = 0; j < n; j++){
-					printf("%d ", (*adj_matrix)[i][j]);
-				}
-				printf("\n");
-			}
-			printf("v = %d\n", v);
-			for (int i = 0; i < n; i++){
-				for (int j = 0; j < opinions; j++){
-					printf("%d ", (*opinion_matrix)[i][j]);
-				}
-				printf("\n");
-			}
-			exit(0); //temporary
-			return;
-		}
-		int neighbour = rand() % possible_candidates;
-		printf("modify: before drop a link 03\n");
-		int count = 0;
-		for (int i = 0; i < n; i++){ //go through v's neighbours
-			if ((*adj_matrix)[v][i] == 1){ //if we find a neighbour
-				for (int j = 0; j < opinions; j++){ //look through v's opinions
-					for (int k = 0; k < opinions; k++){ //look through v's neighbour's opinions
-						if ((*opinion_matrix)[v][j] == (*opinion_matrix)[v][k]){ //if they share an opinion
-							disqualified = 1;
-						}
-					}
-				}
-				if (!disqualified){
-					count++;
-					disqualified = 0;
-				}
-				if ((count - 1) == neighbour){
-					if ((*adj_matrix)[v][i] == 0 || (*adj_matrix)[i][v] == 0){
-						printf("---- exit 08 ----\n");
-						exit(0);
-					}
-					(*adj_matrix)[v][i] = 0;
-					(*adj_matrix)[i][v] = 0;
-					return;
-				}
-			}
-		}
-	}
-
-	else { //with probability prob_none, nothing happens
-		printf("modify: do nothing\n");
-	}
-
-}*/
 
 void write_to_file(int n, int opinions, int*** adj_matrix, int*** opinion_matrix){
 
@@ -511,6 +302,8 @@ int main(){
 	//set rewire_strength parameter
 	int rewire_strength = 1;
 
+	int num_iterations = n*n;
+
 	//allocate memory for adjacency matrix
 	int** adj_matrix = (int**)malloc(n * sizeof(int*));
 	for (int i = 0; i < n; i++){
@@ -526,20 +319,22 @@ int main(){
 		}
 	}
 
-	//make sure these files don't exist before we begin a new simulation
 	FILE *adj_matrix_file;
 	adj_matrix_file = fopen("adj_matrix", "w");
 	fprintf(adj_matrix_file, "%d\n", n);
+	fprintf(adj_matrix_file, "%d\n", num_iterations);
 	fclose(adj_matrix_file);
 
 	FILE *opinion_matrix_file;
 	opinion_matrix_file = fopen("opinion_matrix", "w");
 	fprintf(opinion_matrix_file, "%d\n", n);
+	fprintf(opinion_matrix_file, "%d\n", num_iterations);
+	fprintf(opinion_matrix_file, "%d\n", opinions);
 	fclose(opinion_matrix_file);
 
 	init(c, k, n, p, q, opinions, &adj_matrix, &opinion_matrix);
 
-	ng(c, k, n, opinions, &adj_matrix, &opinion_matrix, rewire_strength);
+	ng(c, k, n, opinions, &adj_matrix, &opinion_matrix, num_iterations, rewire_strength);
 
 	//free memory
 	for (int i = 0; i < n; i++){
