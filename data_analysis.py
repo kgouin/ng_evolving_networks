@@ -1,41 +1,53 @@
-import matplotlib.pyplot as plt
-import seaborn as sns
 import numpy as np
+import matplotlib.pyplot as plt
+import networkx as nx
 
-file = open("adj_matrix", "r") #open adj_matrix file for reading
+adj_file = open("adj_matrix", "r") #open adj_matrix file for reading
+opinion_file = open("opinion_matrix", "r") #open opinion_matrix file for reading
 
-n = int(file.readline()) #read first line of file, which contains the value of n (aka. the number of vertices in the graph)
+n = int(adj_file.readline()) #read first line of either file, which contains the value of n
+num_iterations = int(adj_file.readline()) #read second line of either file, which contains the number of iterations performed in the ng
 
-NUM_ITERATIONS = n*n #this will help us determine the length of the file. this value comes from code.c
+opinion_file.readline() #read first (redundant) line of opinion_file
+opinion_file.readline() #read second (redundant) line of opinion_file
+opinions = int(opinion_file.readline()) #read third line of opinion_file, which contains the number of possible opinions in the system
 
 adj_matrix = [[0]*n]*n
+opinion_matrix = [[0]*opinions]*n
 
-for k in range(0,NUM_ITERATIONS*n,n*n):
-    for i in range(n):
-        adj_matrix[i] = list(file.readline().replace(" ", "").replace("\n", ""))
-        for j in range(n):
-            adj_matrix[i][j] = int(adj_matrix[i][j])
+g = nx.Graph() #create graph
 
-    ax = sns.heatmap(adj_matrix, linewidth=0.5, cbar=False)
-    plt.savefig('{0}.png'.format(k/(n*n)), dpi=1000, bbox_inches='tight')
+for i in range(n): #set graph vertices
+    g.add_node(i)
 
-# generate 2 2d grids for the x & y bounds
-#y, x = np.meshgrid(np.linspace(-3, 3, 100), np.linspace(-3, 3, 100))
+#pos = nx.spring_layout(g, seed=3113794652)
+#nx.spring_layout(g, pos=pos, fixed=g.nodes)
+#nx.draw_networkx_nodes(g, pos, node_color='k', node_size=2)
 
-#z = (1 - x / 2. + x ** 5 + y ** 3) * np.exp(-x ** 2 - y ** 2)
-# x and y are bounds, so z should be the value *inside* those bounds.
-# Therefore, remove the last value from the z array.
-#z = z[:-1, :-1]
-#z_min, z_max = -np.abs(z).max(), np.abs(z).max()
+for i in range(0, num_iterations, n):
 
-#fig, ax = plt.subplots()
+    dictionary = {}
 
-#c = ax.pcolormesh(x, y, z, cmap='RdBu', vmin=z_min, vmax=z_max)
-#ax.set_title('pcolormesh')
-# set the limits of the plot to the limits of the data
-#ax.axis([x.min(), x.max(), y.min(), y.max()])
-#fig.colorbar(c, ax=ax)
+    for j in range(n):
+        adj_matrix[j] = [int(num) for num in adj_file.readline().split(' ')[:-1]] #encode adjacency matrix
+        opinion_matrix[j] = [int(num) for num in opinion_file.readline().split(' ')[:-1]] #encode opinion matrix
 
-file.close()
+    for j in range(n):
+        temp_array = []
+        for k in range(opinions):
+            if opinion_matrix[j][k] != -1:
+                temp_array.append(opinion_matrix[j][k]) #for each vertex, look at its non-empty opinions
+        dictionary[j] = temp_array #add these opinions to a dictionary for correct labeling of graph vertices
+        for k in range(i, n):
+            if adj_matrix[j][k] == 1:
+                g.add_edge(j,k) #add edges of the graph
 
-#plt.savefig('test_fig.png', dpi=1000, bbox_inches='tight')
+    #nx.draw_networkx_edges(g, pos, width=0.1, edge_color='k')
+    #nx.draw_networkx_labels(g, pos, labels=dictionary, font_size=10, font_color='k', font_family='sans-serif', font_weight='normal', alpha=None, bbox=None, horizontalalignment='center', verticalalignment='center', ax=None, clip_on=True)
+    nx.draw(g, with_labels=True, labels=dictionary, node_color='white', width=0.1, node_size=4, font_size=6)
+    plt.savefig('fig_iteration_'+str(i)+'.png', dpi=1000, bbox_inches='tight')
+
+    g.clear_edges()
+
+adj_file.close()
+opinion_file.close()
