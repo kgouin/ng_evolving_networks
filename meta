@@ -1,0 +1,53 @@
+c = 2
+k = 4
+p = 0.800000
+q = 0.040000
+n = 8
+opinions = 2
+rewire_strength = 1
+
+adj_matrix_initial:
+0 1 1 1 0 0 1 0 
+1 0 1 1 0 0 0 0 
+1 1 0 1 0 0 0 0 
+1 1 1 0 0 0 0 0 
+0 0 0 0 0 1 1 1 
+0 0 0 0 1 0 1 1 
+1 0 0 0 1 1 0 1 
+0 0 0 0 1 1 1 0 
+
+opinion_matrix_initial:
+0 -1 
+0 -1 
+0 -1 
+0 -1 
+1 -1 
+1 -1 
+1 -1 
+1 -1 
+
+num_components_initial = 1
+
+adj_matrix_final:
+0 1 1 1 0 0 1 0 
+1 0 1 1 0 0 1 0 
+1 1 0 1 0 0 1 0 
+1 1 1 0 0 0 1 0 
+0 0 0 0 0 1 0 1 
+0 0 0 0 1 0 0 1 
+1 1 1 1 0 0 0 0 
+0 0 0 0 1 1 0 0 
+
+opinion_matrix_final:
+0 -1 
+0 -1 
+0 -1 
+0 -1 
+1 -1 
+1 -1 
+0 -1 
+1 -1 
+
+num_components_final = 2
+
+timesteps = 17

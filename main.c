@@ -7,6 +7,8 @@ void init(int, int, int, double, double, int, int***, int***);
 void ng(int, int, int, int, int***, int***, int);
 void rewire(int, int, int, int, int***, int***, int);
 int is_game_over(int, int, int, int, int***, int***, int);
+int num_components(int, int***);
+void DFS(int, int, int**, int***);
 void print_info(int, int, int***, int***);
 void write_to_file(int, int, int***, int***, int);
 
@@ -55,9 +57,24 @@ void init(int c, int k, int n, double p, double q, int opinions, int*** adj_matr
 
 	write_to_file(n, opinions, adj_matrix, opinion_matrix, 1);
 
-	//printf("--------------------------------\n");
-	//printf("initial configuration: \n");
-	//print_info(n, opinions, adj_matrix, opinion_matrix);
+	FILE *meta;
+	meta = fopen("meta", "a");
+	fprintf(meta, "\nadj_matrix_initial:\n");
+	for (int i = 0; i < n; i++){
+		for (int j = 0; j < n; j++){
+			fprintf(meta, "%d ", (*adj_matrix)[i][j]);
+		}
+		fprintf(meta, "\n");
+	}
+	fprintf(meta, "\nopinion_matrix_initial:\n");
+	for (int i = 0; i < n; i++){
+		for (int j = 0; j < opinions; j++){
+			fprintf(meta, "%d ", (*opinion_matrix)[i][j]);
+		}
+		fprintf(meta, "\n");
+	}
+	fprintf(meta, "\nnum_components_initial = %d\n", num_components(n, adj_matrix));
+	fclose(meta);
 
 }
 
@@ -154,12 +171,25 @@ void ng(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion_mat
 
 	write_to_file(n, opinions, adj_matrix, opinion_matrix, 0);
 
-	//printf("--------------------------------\n");
-	//printf("final configuration: \n");
-	//print_info(n, opinions, adj_matrix, opinion_matrix);
-	printf("----------------------------------------\n");
-	printf("time steps to final configuration = %d\n", timestep);
-	printf("----------------------------------------\n");
+	FILE *meta;
+	meta = fopen("meta", "a");
+	fprintf(meta, "\nadj_matrix_final:\n");
+	for (int i = 0; i < n; i++){
+		for (int j = 0; j < n; j++){
+			fprintf(meta, "%d ", (*adj_matrix)[i][j]);
+		}
+		fprintf(meta, "\n");
+	}
+	fprintf(meta, "\nopinion_matrix_final:\n");
+	for (int i = 0; i < n; i++){
+		for (int j = 0; j < opinions; j++){
+			fprintf(meta, "%d ", (*opinion_matrix)[i][j]);
+		}
+		fprintf(meta, "\n");
+	}
+	fprintf(meta, "\nnum_components_final = %d\n", num_components(n, adj_matrix));
+	fprintf(meta, "\ntimesteps = %d\n", timestep);
+	fclose(meta);
 
 }
 
@@ -303,6 +333,37 @@ int is_game_over(int c, int k, int n, int opinions, int*** adj_matrix, int*** op
 
 }
 
+int num_components(int n, int*** adj_matrix){
+
+	int* visited = (int*)malloc(n * sizeof(int)); //create visited array
+	for (int i = 0; i < n; i++){ //set all slots to false
+		visited[i] = 0;
+	}
+
+	int num_components = 0;
+
+	for (int i = 0; i < n; i++){
+		if (visited[i] == 0){
+			DFS(n, i, &visited, adj_matrix);
+			num_components++;
+		}
+	}
+
+	return num_components;
+
+}
+
+void DFS(int n, int v, int** visited, int*** adj_matrix){
+
+	(*visited)[v] = 1;
+	for (int j = 0; j < n; j++){
+		if ((*adj_matrix)[v][j] == 1 && !(*visited)[j]){
+			DFS(n, j, visited, adj_matrix);
+		}
+	}
+
+}
+
 void print_info(int n, int opinions, int*** adj_matrix, int*** opinion_matrix){
 
 	for (int i = 0; i < n; i++){
@@ -396,6 +457,17 @@ int main(){
 			opinion_matrix[i][j] = -1;
 		}
 	}
+
+	FILE *meta;
+	meta = fopen("meta", "w");
+	fprintf(meta, "c = %d\n", c);
+	fprintf(meta, "k = %d\n", k);
+	fprintf(meta, "p = %f\n", p);
+	fprintf(meta, "q = %f\n", q);
+	fprintf(meta, "n = %d\n", n);
+	fprintf(meta, "opinions = %d\n", opinions);
+	fprintf(meta, "rewire_strength = %d\n", rewire_strength);
+	fclose(meta);
 
 	FILE *adj_matrix_file_initial;
 	adj_matrix_file_initial = fopen("adj_matrix_initial", "w");
