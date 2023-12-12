@@ -4,10 +4,11 @@
 #include <sys/time.h>
 
 void init(int, int, int, double, double, int, int***, int***);
-void ng(int, int, int, int, int***, int***, int, int);
+void ng(int, int, int, int, int***, int***, int);
 void rewire(int, int, int, int, int***, int***, int);
-//void modify(int, int, int, int, int***, int***, double, double, double);
-void write_to_file(int, int, int***, int***);
+int is_game_over(int, int, int, int, int***, int***, int);
+void print_info(int, int, int***, int***);
+void write_to_file(int, int, int***, int***, int);
 
 //The planted partition model partitions a graph with n=c*k vertices
 //in c communities with k vertices each. Two vertices within the same
@@ -52,15 +53,24 @@ void init(int c, int k, int n, double p, double q, int opinions, int*** adj_matr
 		}
 	}
 
-	write_to_file(n, opinions, adj_matrix, opinion_matrix);
+	write_to_file(n, opinions, adj_matrix, opinion_matrix, 1);
+
+	//printf("--------------------------------\n");
+	//printf("initial configuration: \n");
+	//print_info(n, opinions, adj_matrix, opinion_matrix);
 
 }
 
-void ng(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion_matrix, int num_iterations, int rewire_strength){
+void ng(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion_matrix, int rewire_strength){
 
-	for (k = 0; k < num_iterations; k++){
+	int timestep = 0;
+
+	while (!is_game_over(c, k, n, opinions, adj_matrix, opinion_matrix, rewire_strength)){
 		//play the naming game
-		int speaker = rand() % n;	//pick a random vertex as speaker (uniformity is not perfect, but it's good enough for our purposes)
+
+		timestep++;
+
+		int speaker = rand() % n; //pick a random vertex as speaker
 
 		//select a random neighbour of the vertex as hearer
 		//here we go through the speaker's neighbours, count them, then produce a rand int between 0 and number of neighbours inclusive
@@ -72,8 +82,13 @@ void ng(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion_mat
 			}
 		}
 
-		if (speaker_num_neighbours == 0) continue; //if speaker has no neighbours, skip this round of ng, skip rewire
-		//should we really skip rewire?
+		if (speaker_num_neighbours == 0){
+			rewire(c, k, n, opinions, adj_matrix, opinion_matrix, rewire_strength);
+			continue; //if speaker has no neighbours, skip this round of ng, don't skip rewire
+			//this way, at every time step:
+			//we play the ng (if speaker has no neighbours, so be it)
+			//we rewire (if rewiring is impossible, so be it)
+		}
 
 		int hearer = rand() % speaker_num_neighbours;
 
@@ -135,13 +150,16 @@ void ng(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion_mat
 		}
 
 		rewire(c, k, n, opinions, adj_matrix, opinion_matrix, rewire_strength);
-
-		if (k >= n && k % n == 0){ //write to file every n iterations
-			write_to_file(n, opinions, adj_matrix, opinion_matrix);
-		}
 	}
 
-	write_to_file(n, opinions, adj_matrix, opinion_matrix); //write final arrangements to file
+	write_to_file(n, opinions, adj_matrix, opinion_matrix, 0);
+
+	//printf("--------------------------------\n");
+	//printf("final configuration: \n");
+	//print_info(n, opinions, adj_matrix, opinion_matrix);
+	printf("----------------------------------------\n");
+	printf("time steps to final configuration = %d\n", timestep);
+	printf("----------------------------------------\n");
 
 }
 
@@ -222,6 +240,8 @@ void rewire(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion
 		(*adj_matrix)[eligible_for_edge_addition[pair_to_add][1]][eligible_for_edge_addition[pair_to_add][0]] = 1;
 	}
 
+	//if rewire is not possible, do nothing
+
 	//we'll have to think of a way to handle vertices with number of non -1 opinions which is less than rewire_strength
 	//this is handled above. it'll just fall under the "eligible for edge removal" category
 	//it's a bit weird to have it set up like that though... maybe speak to Alan about it
@@ -258,31 +278,93 @@ void rewire(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion
 
 }
 
-void write_to_file(int n, int opinions, int*** adj_matrix, int*** opinion_matrix){
+int is_game_over(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion_matrix, int rewire_strength){
 
-	//write adjacency matrix and corresponding opinion matrix to file for later analysis or count of opinions
+	//the game is over if:
+	//for every vertex with at least one neighbour (i.e. this doesn't apply to disconnected vertices)
+	//that vertex has to have a single opinion AND
+	//that vertex's neighbours must all have that same opinion
 
-	//print adjacency matrix to file for later visualization
-	FILE *adj_matrix_file;
-	adj_matrix_file = fopen("adj_matrix", "a");
+	for (int i = 0; i < n; i++){ //for every vertex
+		for (int j = 0; j < n; j++){ //for every potential neighbour of vertex
+			if ((*adj_matrix)[i][j] == 1){ //if they are neighbours
+				if (((*opinion_matrix)[i][0] != (*opinion_matrix)[j][0]) || ((*opinion_matrix)[i][1] != -1 || (*opinion_matrix)[j][1] != -1)){
+					//if opinions of vertex i and j are the not the same OR
+					//if someone has more than one opinion (which are alway arranged from left to right)
+					//then the game is not over
+					return 0;
+				}
+			}
+		}
+	}
+
+	//if we're here, it's because the game is not not over
+	return 1;
+
+}
+
+void print_info(int n, int opinions, int*** adj_matrix, int*** opinion_matrix){
+
 	for (int i = 0; i < n; i++){
 		for (int j = 0; j < n; j++){
-			fprintf(adj_matrix_file, "%d ", (*adj_matrix)[i][j]);
+			printf("%d ", (*adj_matrix)[i][j]);
 		}
-		fprintf(adj_matrix_file, "\n");
+		printf("\n");
 	}
-	fclose(adj_matrix_file);
-
-	//print opinion matrix to file for later visualization
-	FILE *opinion_matrix_file;
-	opinion_matrix_file = fopen("opinion_matrix", "a");
 	for (int i = 0; i < n; i++){
 		for (int j = 0; j < opinions; j++){
-			fprintf(opinion_matrix_file, "%d ", (*opinion_matrix)[i][j]);
+			printf("%d ", (*opinion_matrix)[i][j]);
 		}
-		fprintf(opinion_matrix_file, "\n");
+		printf("\n");
 	}
-	fclose(opinion_matrix_file);
+
+}
+
+void write_to_file(int n, int opinions, int*** adj_matrix, int*** opinion_matrix, int initial){
+
+	if (initial){
+		FILE *adj_matrix_file_initial;
+		adj_matrix_file_initial = fopen("adj_matrix_initial", "a");
+		for (int i = 0; i < n; i++){
+			for (int j = 0; j < n; j++){
+				fprintf(adj_matrix_file_initial, "%d ", (*adj_matrix)[i][j]);
+			}
+			fprintf(adj_matrix_file_initial, "\n");
+		}
+		fclose(adj_matrix_file_initial);
+
+		FILE *opinion_matrix_file_initial;
+		opinion_matrix_file_initial = fopen("opinion_matrix_initial", "a");
+		for (int i = 0; i < n; i++){
+			for (int j = 0; j < opinions; j++){
+				fprintf(opinion_matrix_file_initial, "%d ", (*opinion_matrix)[i][j]);
+			}
+			fprintf(opinion_matrix_file_initial, "\n");
+		}
+		fclose(opinion_matrix_file_initial);
+	}
+
+	else{
+		FILE *adj_matrix_file_final;
+		adj_matrix_file_final = fopen("adj_matrix_final", "a");
+		for (int i = 0; i < n; i++){
+			for (int j = 0; j < n; j++){
+				fprintf(adj_matrix_file_final, "%d ", (*adj_matrix)[i][j]);
+			}
+			fprintf(adj_matrix_file_final, "\n");
+		}
+		fclose(adj_matrix_file_final);
+
+		FILE *opinion_matrix_file_final;
+		opinion_matrix_file_final = fopen("opinion_matrix_final", "a");
+		for (int i = 0; i < n; i++){
+			for (int j = 0; j < opinions; j++){
+				fprintf(opinion_matrix_file_final, "%d ", (*opinion_matrix)[i][j]);
+			}
+			fprintf(opinion_matrix_file_final, "\n");
+		}
+		fclose(opinion_matrix_file_final);
+	}
 
 }
 
@@ -291,18 +373,14 @@ int main(){
 
 	srand(time(NULL));
 
-	//set partition model parameters
-	int c = 4;
-	int k = 6;
-	double p = 0.8;
-	double q = 0.04;
-	int n = c*k;
+	//set parameters
+	int c = 2; //number of communities
+	int k = 4; //number of vertices within each community
+	double p = 0.8; //probability of an edge between members of the same community
+	double q = 0.04; //probability of an edge between members of different communities
+	int n = c*k; //total number of vertices
 	int opinions = c; //total number of opinions in the system
-
-	//set rewire_strength parameter
-	int rewire_strength = 1;
-
-	int num_iterations = n*n;
+	int rewire_strength = 1; //rewire_strength will always be set to 1
 
 	//allocate memory for adjacency matrix
 	int** adj_matrix = (int**)malloc(n * sizeof(int*));
@@ -319,22 +397,31 @@ int main(){
 		}
 	}
 
-	FILE *adj_matrix_file;
-	adj_matrix_file = fopen("adj_matrix", "w");
-	fprintf(adj_matrix_file, "%d\n", n);
-	fprintf(adj_matrix_file, "%d\n", num_iterations);
-	fclose(adj_matrix_file);
+	FILE *adj_matrix_file_initial;
+	adj_matrix_file_initial = fopen("adj_matrix_initial", "w");
+	fprintf(adj_matrix_file_initial, "%d\n", n);
+	fclose(adj_matrix_file_initial);
 
-	FILE *opinion_matrix_file;
-	opinion_matrix_file = fopen("opinion_matrix", "w");
-	fprintf(opinion_matrix_file, "%d\n", n);
-	fprintf(opinion_matrix_file, "%d\n", num_iterations);
-	fprintf(opinion_matrix_file, "%d\n", opinions);
-	fclose(opinion_matrix_file);
+	FILE *opinion_matrix_file_initial;
+	opinion_matrix_file_initial = fopen("opinion_matrix_initial", "w");
+	fprintf(opinion_matrix_file_initial, "%d\n", n);
+	fprintf(opinion_matrix_file_initial, "%d\n", opinions);
+	fclose(opinion_matrix_file_initial);
+
+	FILE *adj_matrix_file_final;
+	adj_matrix_file_final = fopen("adj_matrix_final", "w");
+	fprintf(adj_matrix_file_final, "%d\n", n);
+	fclose(adj_matrix_file_final);
+
+	FILE *opinion_matrix_file_final;
+	opinion_matrix_file_final = fopen("opinion_matrix_final", "w");
+	fprintf(opinion_matrix_file_final, "%d\n", n);
+	fprintf(opinion_matrix_file_final, "%d\n", opinions);
+	fclose(opinion_matrix_file_final);
 
 	init(c, k, n, p, q, opinions, &adj_matrix, &opinion_matrix);
 
-	ng(c, k, n, opinions, &adj_matrix, &opinion_matrix, num_iterations, rewire_strength);
+	ng(c, k, n, opinions, &adj_matrix, &opinion_matrix, rewire_strength);
 
 	//free memory
 	for (int i = 0; i < n; i++){
