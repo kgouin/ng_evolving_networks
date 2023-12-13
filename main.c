@@ -20,6 +20,10 @@ void write_to_file(int, int, int***, int***, int);
 
 void init(int c, int k, int n, double p, double q, int opinions, int*** adj_matrix, int*** opinion_matrix){
 
+	int num_cross_connections = 0;
+	int num_within_connections = 0;
+	int opinion_divergence = 0;
+
 	//create planted partition adjacency matrix
 	for (int i = 0; i < n; i+=k){ //for each community
 		for (int j = i; j < i+k; j++){ //for each member within the community
@@ -28,6 +32,7 @@ void init(int c, int k, int n, double p, double q, int opinions, int*** adj_matr
 					if (((double)rand()/(double)(RAND_MAX)) < p){
 						(*adj_matrix)[j][m] = 1;
 						(*adj_matrix)[m][j] = 1;
+						num_within_connections++;
 					}
 					else {
 						(*adj_matrix)[j][m] = 0;
@@ -38,6 +43,7 @@ void init(int c, int k, int n, double p, double q, int opinions, int*** adj_matr
 					if (((double)rand()/(double)(RAND_MAX)) < q){
 						(*adj_matrix)[j][m] = 1;
 						(*adj_matrix)[m][j] = 1;
+						num_cross_connections++;
 					}
 					else {
 						(*adj_matrix)[j][m] = 0;
@@ -50,7 +56,11 @@ void init(int c, int k, int n, double p, double q, int opinions, int*** adj_matr
 				(*opinion_matrix)[j][0] = i/k;
 			}
 			else{
-				(*opinion_matrix)[j][0] = rand() % opinions;
+				(*opinion_matrix)[j][0] = i/k;
+				while ((*opinion_matrix)[j][0] == i/k){ //so that the opinion is NOT i/k
+					(*opinion_matrix)[j][0] = rand() % opinions;
+				}
+				opinion_divergence++;
 			}
 		}
 	}
@@ -59,6 +69,10 @@ void init(int c, int k, int n, double p, double q, int opinions, int*** adj_matr
 
 	FILE *meta;
 	meta = fopen("meta", "a");
+	fprintf(meta, "\nnum_cross_connections = %d\n", num_cross_connections);
+	fprintf(meta, "avg_num_cross_connections = %f\n", ((float)(num_cross_connections))/c);
+	fprintf(meta, "avg_num_within_connections = %f\n", ((float)(num_within_connections))/c);
+	fprintf(meta, "avg_opinion_divergence = %f\n", ((float)(opinion_divergence))/c);
 	fprintf(meta, "\nadj_matrix_initial:\n");
 	for (int i = 0; i < n; i++){
 		for (int j = 0; j < n; j++){

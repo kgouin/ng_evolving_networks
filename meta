@@ -6,48 +6,53 @@ n = 8
 opinions = 2
 rewire_strength = 1
 
+num_cross_connections = 0
+avg_num_cross_connections = 0.000000
+avg_num_within_connections = 5.000000
+avg_opinion_divergence = 0.500000
+
 adj_matrix_initial:
-0 1 1 1 0 0 1 0 
+0 1 1 0 0 0 0 0 
 1 0 1 1 0 0 0 0 
 1 1 0 1 0 0 0 0 
-1 1 1 0 0 0 0 0 
-0 0 0 0 0 1 1 1 
+0 1 1 0 0 0 0 0 
+0 0 0 0 0 1 1 0 
 0 0 0 0 1 0 1 1 
-1 0 0 0 1 1 0 1 
-0 0 0 0 1 1 1 0 
+0 0 0 0 1 1 0 1 
+0 0 0 0 0 1 1 0 
 
 opinion_matrix_initial:
 0 -1 
 0 -1 
 0 -1 
 0 -1 
-1 -1 
+0 -1 
 1 -1 
 1 -1 
 1 -1 
 
-num_components_initial = 1
+num_components_initial = 2
 
 adj_matrix_final:
-0 1 1 1 0 0 1 0 
-1 0 1 1 0 0 1 0 
-1 1 0 1 0 0 1 0 
-1 1 1 0 0 0 1 0 
+0 1 1 0 1 0 0 0 
+1 0 1 1 1 0 0 0 
+1 1 0 1 0 0 0 0 
+0 1 1 0 0 0 0 0 
+1 1 0 0 0 0 0 0 
+0 0 0 0 0 0 1 1 
 0 0 0 0 0 1 0 1 
-0 0 0 0 1 0 0 1 
-1 1 1 1 0 0 0 0 
-0 0 0 0 1 1 0 0 
+0 0 0 0 0 1 1 0 
 
 opinion_matrix_final:
 0 -1 
 0 -1 
 0 -1 
 0 -1 
-1 -1 
-1 -1 
 0 -1 
+1 -1 
+1 -1 
 1 -1 
 
 num_components_final = 2
 
-timesteps = 17
+timesteps = 2
