@@ -66,7 +66,7 @@ void init(int c, int k, int n, double p, double q, int opinions, int*** adj_matr
 		}
 	}
 
-	write_to_file(n, opinions, adj_matrix, opinion_matrix, 1);
+	//write_to_file(n, opinions, adj_matrix, opinion_matrix, 1);
 
 	count_opinions_and_write_to_file(n, opinions, opinion_matrix);
 
@@ -190,7 +190,7 @@ void ng(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion_mat
 		rewire(c, k, n, opinions, adj_matrix, opinion_matrix, rewire_strength);
 	}
 
-	write_to_file(n, opinions, adj_matrix, opinion_matrix, 0);
+	//write_to_file(n, opinions, adj_matrix, opinion_matrix, 0);
 
 	count_opinions_and_write_to_file(n, opinions, opinion_matrix);
 
@@ -535,27 +535,27 @@ int main(){
 	fprintf(meta, "rewire_strength = %d\n", rewire_strength);
 	fclose(meta);
 
-	FILE *adj_matrix_file_initial;
-	adj_matrix_file_initial = fopen("adj_matrix_initial", "w");
-	fprintf(adj_matrix_file_initial, "%d\n", n);
-	fclose(adj_matrix_file_initial);
+	//FILE *adj_matrix_file_initial;
+	//adj_matrix_file_initial = fopen("adj_matrix_initial", "w");
+	//fprintf(adj_matrix_file_initial, "%d\n", n);
+	//fclose(adj_matrix_file_initial);
 
-	FILE *opinion_matrix_file_initial;
-	opinion_matrix_file_initial = fopen("opinion_matrix_initial", "w");
-	fprintf(opinion_matrix_file_initial, "%d\n", n);
-	fprintf(opinion_matrix_file_initial, "%d\n", opinions);
-	fclose(opinion_matrix_file_initial);
+	//FILE *opinion_matrix_file_initial;
+	//opinion_matrix_file_initial = fopen("opinion_matrix_initial", "w");
+	//fprintf(opinion_matrix_file_initial, "%d\n", n);
+	//fprintf(opinion_matrix_file_initial, "%d\n", opinions);
+	//fclose(opinion_matrix_file_initial);
 
-	FILE *adj_matrix_file_final;
-	adj_matrix_file_final = fopen("adj_matrix_final", "w");
-	fprintf(adj_matrix_file_final, "%d\n", n);
-	fclose(adj_matrix_file_final);
+	//FILE *adj_matrix_file_final;
+	//adj_matrix_file_final = fopen("adj_matrix_final", "w");
+	//fprintf(adj_matrix_file_final, "%d\n", n);
+	//fclose(adj_matrix_file_final);
 
-	FILE *opinion_matrix_file_final;
-	opinion_matrix_file_final = fopen("opinion_matrix_final", "w");
-	fprintf(opinion_matrix_file_final, "%d\n", n);
-	fprintf(opinion_matrix_file_final, "%d\n", opinions);
-	fclose(opinion_matrix_file_final);
+	//FILE *opinion_matrix_file_final;
+	//opinion_matrix_file_final = fopen("opinion_matrix_final", "w");
+	//fprintf(opinion_matrix_file_final, "%d\n", n);
+	//fprintf(opinion_matrix_file_final, "%d\n", opinions);
+	//fclose(opinion_matrix_file_final);
 
 	init(c, k, n, p, q, opinions, &adj_matrix, &opinion_matrix);
 
