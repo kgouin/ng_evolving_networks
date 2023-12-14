@@ -6,53 +6,69 @@ n = 8
 opinions = 2
 rewire_strength = 1
 
-num_cross_connections = 0
-avg_num_cross_connections = 0.000000
-avg_num_within_connections = 5.000000
-avg_opinion_divergence = 0.500000
+num_opinion_0 = 5
+num_opinion_1 = 3
 
-adj_matrix_initial:
-0 1 1 0 0 0 0 0 
-1 0 1 1 0 0 0 0 
-1 1 0 1 0 0 0 0 
-0 1 1 0 0 0 0 0 
-0 0 0 0 0 1 1 0 
-0 0 0 0 1 0 1 1 
-0 0 0 0 1 1 0 1 
-0 0 0 0 0 1 1 0 
-
-opinion_matrix_initial:
-0 -1 
-0 -1 
-0 -1 
-0 -1 
-0 -1 
-1 -1 
-1 -1 
-1 -1 
+component_size_0 = 4
+component_size_4 = 4
 
 num_components_initial = 2
 
-adj_matrix_final:
-0 1 1 0 1 0 0 0 
-1 0 1 1 1 0 0 0 
-1 1 0 1 0 0 0 0 
-0 1 1 0 0 0 0 0 
-1 1 0 0 0 0 0 0 
-0 0 0 0 0 0 1 1 
-0 0 0 0 0 1 0 1 
-0 0 0 0 0 1 1 0 
+num_cross_connections = 0
+avg_num_cross_connections = 0.000000
+avg_num_within_connections = 4.500000
+avg_opinion_divergence = 1.500000
 
-opinion_matrix_final:
-0 -1 
+adj_matrix_initial:
+0 0 1 1 0 0 0 0 
+0 0 1 0 0 0 0 0 
+1 1 0 1 0 0 0 0 
+1 0 1 0 0 0 0 0 
+0 0 0 0 0 1 0 1 
+0 0 0 0 1 0 1 1 
+0 0 0 0 0 1 0 1 
+0 0 0 0 1 1 1 0 
+
+opinion_matrix_initial:
+1 -1 
 0 -1 
 0 -1 
 0 -1 
 0 -1 
 1 -1 
+0 -1 
 1 -1 
-1 -1 
+
+num_opinion_0 = 4
+num_opinion_1 = 4
+
+component_size_0 = 4
+component_size_1 = 4
 
 num_components_final = 2
 
-timesteps = 2
+adj_matrix_final:
+0 0 0 0 1 1 0 1 
+0 0 1 0 0 0 0 0 
+0 1 0 1 0 0 1 0 
+0 0 1 0 0 0 0 0 
+1 0 0 0 0 1 0 1 
+1 0 0 0 1 0 0 1 
+0 0 1 0 0 0 0 0 
+1 0 0 0 1 1 0 0 
+
+opinion_matrix_final:
+1 -1 
+0 -1 
+0 -1 
+0 -1 
+1 -1 
+1 -1 
+0 -1 
+1 -1 
+
+num_successful = 11
+num_unsuccessful = 2
+num_neighbourless_speaker = 0
+
+timesteps = 13

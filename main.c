@@ -9,6 +9,7 @@ void rewire(int, int, int, int, int***, int***, int);
 int is_game_over(int, int, int, int, int***, int***, int);
 int num_components(int, int***);
 void DFS(int, int, int**, int***);
+void count_opinions_and_write_to_file(int, int, int***);
 void print_info(int, int, int***, int***);
 void write_to_file(int, int, int***, int***, int);
 
@@ -67,8 +68,11 @@ void init(int c, int k, int n, double p, double q, int opinions, int*** adj_matr
 
 	write_to_file(n, opinions, adj_matrix, opinion_matrix, 1);
 
+	count_opinions_and_write_to_file(n, opinions, opinion_matrix);
+
 	FILE *meta;
 	meta = fopen("meta", "a");
+	fprintf(meta, "\nnum_components_initial = %d\n", num_components(n, adj_matrix));
 	fprintf(meta, "\nnum_cross_connections = %d\n", num_cross_connections);
 	fprintf(meta, "avg_num_cross_connections = %f\n", ((float)(num_cross_connections))/c);
 	fprintf(meta, "avg_num_within_connections = %f\n", ((float)(num_within_connections))/c);
@@ -87,7 +91,6 @@ void init(int c, int k, int n, double p, double q, int opinions, int*** adj_matr
 		}
 		fprintf(meta, "\n");
 	}
-	fprintf(meta, "\nnum_components_initial = %d\n", num_components(n, adj_matrix));
 	fclose(meta);
 
 }
@@ -95,6 +98,8 @@ void init(int c, int k, int n, double p, double q, int opinions, int*** adj_matr
 void ng(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion_matrix, int rewire_strength){
 
 	int timestep = 0;
+	int num_successful = 0;
+	int num_unsuccessful = 0;
 
 	while (!is_game_over(c, k, n, opinions, adj_matrix, opinion_matrix, rewire_strength)){
 		//play the naming game
@@ -160,6 +165,7 @@ void ng(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion_mat
 		for (int i = 0; i < opinions; i++){
 			if ((*opinion_matrix)[hearer][i] == op){
 				success = 1;
+				num_successful++;
 				(*opinion_matrix)[speaker][0] = op;
 				(*opinion_matrix)[hearer][0] = op;
 				for (int j = 1; j < opinions; j++){
@@ -170,6 +176,7 @@ void ng(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion_mat
 			}
 		}
 		if (success == 0){
+			num_unsuccessful++;
 			if (hearer_num_ops >= opinions){
 				printf("---- exit 03 ----\n");
 				//speaker_num_ops or hearer_num_ops should never be more than opinions
@@ -185,8 +192,11 @@ void ng(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion_mat
 
 	write_to_file(n, opinions, adj_matrix, opinion_matrix, 0);
 
+	count_opinions_and_write_to_file(n, opinions, opinion_matrix);
+
 	FILE *meta;
 	meta = fopen("meta", "a");
+	fprintf(meta, "\nnum_components_final = %d\n", num_components(n, adj_matrix));
 	fprintf(meta, "\nadj_matrix_final:\n");
 	for (int i = 0; i < n; i++){
 		for (int j = 0; j < n; j++){
@@ -201,7 +211,9 @@ void ng(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion_mat
 		}
 		fprintf(meta, "\n");
 	}
-	fprintf(meta, "\nnum_components_final = %d\n", num_components(n, adj_matrix));
+	fprintf(meta, "\nnum_successful = %d\n", num_successful);
+	fprintf(meta, "num_unsuccessful = %d\n", num_unsuccessful); //this is not counting the times where a neighbouless vertex is selected as speaker
+	fprintf(meta, "num_neighbourless_speaker = %d\n", timestep-num_successful-num_unsuccessful);
 	fprintf(meta, "\ntimesteps = %d\n", timestep);
 	fclose(meta);
 
@@ -355,13 +367,33 @@ int num_components(int n, int*** adj_matrix){
 	}
 
 	int num_components = 0;
+	int component_size = 0;
+	int prev_component_size = 0;
+
+	FILE *meta;
+	meta = fopen("meta", "a");
+	fprintf(meta, "\n");
+	fclose(meta);
 
 	for (int i = 0; i < n; i++){
 		if (visited[i] == 0){
 			DFS(n, i, &visited, adj_matrix);
 			num_components++;
+			for (int j = 0; j < n; j++){
+				if (visited[j] == 1){
+					component_size++;
+				}
+			}
+			FILE *meta;
+			meta = fopen("meta", "a");
+			fprintf(meta, "component_size_%d = %d\n", i, component_size-prev_component_size);
+			fclose(meta);
+			prev_component_size = component_size;
+			component_size = 0;
 		}
 	}
+
+	free(visited);
 
 	return num_components;
 
@@ -375,6 +407,26 @@ void DFS(int n, int v, int** visited, int*** adj_matrix){
 			DFS(n, j, visited, adj_matrix);
 		}
 	}
+
+}
+
+void count_opinions_and_write_to_file(int n, int opinions, int*** opinion_matrix){
+
+	int* ops = (int*)calloc(opinions, sizeof(int));
+
+	for (int i = 0; i < n; i++){
+		ops[(*opinion_matrix)[i][0]]++;
+	}
+
+	FILE *meta;
+	meta = fopen("meta", "a");
+	fprintf(meta, "\n");
+	for (int i = 0; i < opinions; i++){
+		fprintf(meta, "num_opinion_%d = %d\n", i, ops[i]);
+	}
+	fclose(meta);
+
+	free(ops);
 
 }
 
