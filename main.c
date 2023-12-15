@@ -7,11 +7,9 @@ void init(int, int, int, double, double, int, int***, int***);
 void ng(int, int, int, int, int***, int***, int);
 void rewire(int, int, int, int, int***, int***, int);
 int is_game_over(int, int, int, int, int***, int***, int);
-int num_components(int, int***);
+int num_components(int, int***, int);
 void DFS(int, int, int**, int***);
-void count_opinions_and_write_to_file(int, int, int***);
-void print_info(int, int, int***, int***);
-void write_to_file(int, int, int***, int***, int);
+int num_opinions(int, int, int***);
 
 //The planted partition model partitions a graph with n=c*k vertices
 //in c communities with k vertices each. Two vertices within the same
@@ -66,31 +64,9 @@ void init(int c, int k, int n, double p, double q, int opinions, int*** adj_matr
 		}
 	}
 
-	//write_to_file(n, opinions, adj_matrix, opinion_matrix, 1);
-
-	count_opinions_and_write_to_file(n, opinions, opinion_matrix);
-
 	FILE *meta;
 	meta = fopen("meta", "a");
-	fprintf(meta, "\nnum_components_initial = %d\n", num_components(n, adj_matrix));
-	fprintf(meta, "\nnum_cross_connections = %d\n", num_cross_connections);
-	fprintf(meta, "avg_num_cross_connections = %f\n", ((float)(num_cross_connections))/c);
-	fprintf(meta, "avg_num_within_connections = %f\n", ((float)(num_within_connections))/c);
-	fprintf(meta, "avg_opinion_divergence = %f\n", ((float)(opinion_divergence))/c);
-	fprintf(meta, "\nadj_matrix_initial:\n");
-	for (int i = 0; i < n; i++){
-		for (int j = 0; j < n; j++){
-			fprintf(meta, "%d ", (*adj_matrix)[i][j]);
-		}
-		fprintf(meta, "\n");
-	}
-	fprintf(meta, "\nopinion_matrix_initial:\n");
-	for (int i = 0; i < n; i++){
-		for (int j = 0; j < opinions; j++){
-			fprintf(meta, "%d ", (*opinion_matrix)[i][j]);
-		}
-		fprintf(meta, "\n");
-	}
+	fprintf(meta, "%d %f %f %f ", num_components(n, adj_matrix, 0), ((float)(num_cross_connections))/c, ((float)(num_within_connections))/c, ((float)(opinion_divergence))/c);
 	fclose(meta);
 
 }
@@ -190,41 +166,16 @@ void ng(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion_mat
 		rewire(c, k, n, opinions, adj_matrix, opinion_matrix, rewire_strength);
 	}
 
-	//write_to_file(n, opinions, adj_matrix, opinion_matrix, 0);
-
-	count_opinions_and_write_to_file(n, opinions, opinion_matrix);
-
 	FILE *meta;
 	meta = fopen("meta", "a");
-	fprintf(meta, "\nnum_components_final = %d\n", num_components(n, adj_matrix));
-	fprintf(meta, "\nadj_matrix_final:\n");
-	for (int i = 0; i < n; i++){
-		for (int j = 0; j < n; j++){
-			fprintf(meta, "%d ", (*adj_matrix)[i][j]);
-		}
-		fprintf(meta, "\n");
-	}
-	fprintf(meta, "\nopinion_matrix_final:\n");
-	for (int i = 0; i < n; i++){
-		for (int j = 0; j < opinions; j++){
-			fprintf(meta, "%d ", (*opinion_matrix)[i][j]);
-		}
-		fprintf(meta, "\n");
-	}
-	fprintf(meta, "\nnum_successful = %d\n", num_successful);
-	fprintf(meta, "num_unsuccessful = %d\n", num_unsuccessful); //this is not counting the times where a neighbouless vertex is selected as speaker
-	fprintf(meta, "num_neighbourless_speaker = %d\n", timestep-num_successful-num_unsuccessful);
-	fprintf(meta, "\ntimesteps = %d\n", timestep);
+	fprintf(meta, "%d %d %d %d %d %d\n", num_components(n, adj_matrix, 1), num_successful, num_unsuccessful, timestep-num_successful-num_unsuccessful, num_opinions(n, opinions, opinion_matrix), timestep);
 	fclose(meta);
 
 }
 
 void rewire(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion_matrix, int rewire_strength){
 
-	//if rewire_strength=1 then this is 'weak' rewire, if rewire_strength = opinions then this is 'strong' rewire
 	//if rewire_strength=0 then no rewire is executed
-	//maybe we could define 'weak' and 'strong' rewire as a function of the number of opinions
-	//(like if rewire_strength < opinions/4 then 'weak' if rewire_strength > 3*opinions/4 then 'strong')
 
 	//allocate memory for eligible_for_edge_removal array
 	int** eligible_for_edge_removal = (int**)malloc(n*n * sizeof(int*));
@@ -298,32 +249,6 @@ void rewire(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion
 
 	//if rewire is not possible, do nothing
 
-	//we'll have to think of a way to handle vertices with number of non -1 opinions which is less than rewire_strength
-	//this is handled above. it'll just fall under the "eligible for edge removal" category
-	//it's a bit weird to have it set up like that though... maybe speak to Alan about it
-
-	//step 1: remove an existing edge between two vertices which share less than rewire_strength opinions
-	//go through all vertices one by one, check if they share less than rewire_strength opinions with each of their neighbours
-	//each pair that shares less than rewire_strength opinions between them is eligible for edge removal
-	//store these in a 2D array eligible_for_edge_removal
-	//each pair that shares rewire_strength or more opinions between them is NOT eligible for edge removal
-
-	//step 2: add a non-existing edge between two vertices which share rewire_strength opinions or more
-	//go through all vertices one by one, check if they share rewire_strength opinions or more with each of their non-neighbours
-	//each pair that shares rewire_strength opinions or more between them is eligible for edge addition
-	//store these in a 2D array eligible_for_edge_addition
-	//each pair that shares less than rewire_strength opinions between them is NOT eligible for edge addition
-
-	//as long as (there exists a pair of vertices that share less than rewire_strength opinions between them AND share an edge) AND
-	//(a pair of vertices that share rewire_strength or more opinions between them AND do not share an edge) then we can rewire
-	//make sure to check this before proceeding
-
-	//pick a random pair from eligible_for_edge_removal
-	//remove the edge by changing adj_matrix at the two appropriate indices
-
-	//pick a random pair from eligible_for_edge_addition
-	//add the edge by changing adj_matrix at the two appropriate indices
-
 	//free memory for eligible_for_edge_removal & eligible_for_edge_addition arrays
 	for (int i = 0; i < n*n; i++){
 		free(eligible_for_edge_removal[i]);
@@ -359,43 +284,45 @@ int is_game_over(int c, int k, int n, int opinions, int*** adj_matrix, int*** op
 
 }
 
-int num_components(int n, int*** adj_matrix){
+int num_components(int n, int*** adj_matrix, int is_final){
 
 	int* visited = (int*)malloc(n * sizeof(int)); //create visited array
 	for (int i = 0; i < n; i++){ //set all slots to false
 		visited[i] = 0;
 	}
 
-	int num_components = 0;
+	int num_of_components = 0;
 	int component_size = 0;
 	int prev_component_size = 0;
-
-	FILE *meta;
-	meta = fopen("meta", "a");
-	fprintf(meta, "\n");
-	fclose(meta);
 
 	for (int i = 0; i < n; i++){
 		if (visited[i] == 0){
 			DFS(n, i, &visited, adj_matrix);
-			num_components++;
+			num_of_components++;
 			for (int j = 0; j < n; j++){
 				if (visited[j] == 1){
 					component_size++;
 				}
 			}
-			FILE *meta;
-			meta = fopen("meta", "a");
-			fprintf(meta, "component_size_%d = %d\n", i, component_size-prev_component_size);
-			fclose(meta);
+			FILE *extra;
+			extra = fopen("extra", "a");
+			fprintf(extra, "%d ", component_size-prev_component_size);
+			fclose(extra);
 			prev_component_size = component_size;
 			component_size = 0;
 		}
 	}
 
+	if (is_final){
+		FILE *extra;
+		extra = fopen("extra", "a");
+		fprintf(extra, "\n");
+		fclose(extra);
+	}
+
 	free(visited);
 
-	return num_components;
+	return num_of_components;
 
 }
 
@@ -410,7 +337,7 @@ void DFS(int n, int v, int** visited, int*** adj_matrix){
 
 }
 
-void count_opinions_and_write_to_file(int n, int opinions, int*** opinion_matrix){
+int num_opinions(int n, int opinions, int*** opinion_matrix){
 
 	int* ops = (int*)calloc(opinions, sizeof(int));
 
@@ -418,96 +345,35 @@ void count_opinions_and_write_to_file(int n, int opinions, int*** opinion_matrix
 		ops[(*opinion_matrix)[i][0]]++;
 	}
 
-	FILE *meta;
-	meta = fopen("meta", "a");
-	fprintf(meta, "\n");
+	int num_ops = 0;
 	for (int i = 0; i < opinions; i++){
-		fprintf(meta, "num_opinion_%d = %d\n", i, ops[i]);
+		if (ops[i] > 0){
+			num_ops++;
+		}
 	}
-	fclose(meta);
 
 	free(ops);
 
-}
-
-void print_info(int n, int opinions, int*** adj_matrix, int*** opinion_matrix){
-
-	for (int i = 0; i < n; i++){
-		for (int j = 0; j < n; j++){
-			printf("%d ", (*adj_matrix)[i][j]);
-		}
-		printf("\n");
-	}
-	for (int i = 0; i < n; i++){
-		for (int j = 0; j < opinions; j++){
-			printf("%d ", (*opinion_matrix)[i][j]);
-		}
-		printf("\n");
-	}
+	return num_ops;
 
 }
-
-void write_to_file(int n, int opinions, int*** adj_matrix, int*** opinion_matrix, int initial){
-
-	if (initial){
-		FILE *adj_matrix_file_initial;
-		adj_matrix_file_initial = fopen("adj_matrix_initial", "a");
-		for (int i = 0; i < n; i++){
-			for (int j = 0; j < n; j++){
-				fprintf(adj_matrix_file_initial, "%d ", (*adj_matrix)[i][j]);
-			}
-			fprintf(adj_matrix_file_initial, "\n");
-		}
-		fclose(adj_matrix_file_initial);
-
-		FILE *opinion_matrix_file_initial;
-		opinion_matrix_file_initial = fopen("opinion_matrix_initial", "a");
-		for (int i = 0; i < n; i++){
-			for (int j = 0; j < opinions; j++){
-				fprintf(opinion_matrix_file_initial, "%d ", (*opinion_matrix)[i][j]);
-			}
-			fprintf(opinion_matrix_file_initial, "\n");
-		}
-		fclose(opinion_matrix_file_initial);
-	}
-
-	else{
-		FILE *adj_matrix_file_final;
-		adj_matrix_file_final = fopen("adj_matrix_final", "a");
-		for (int i = 0; i < n; i++){
-			for (int j = 0; j < n; j++){
-				fprintf(adj_matrix_file_final, "%d ", (*adj_matrix)[i][j]);
-			}
-			fprintf(adj_matrix_file_final, "\n");
-		}
-		fclose(adj_matrix_file_final);
-
-		FILE *opinion_matrix_file_final;
-		opinion_matrix_file_final = fopen("opinion_matrix_final", "a");
-		for (int i = 0; i < n; i++){
-			for (int j = 0; j < opinions; j++){
-				fprintf(opinion_matrix_file_final, "%d ", (*opinion_matrix)[i][j]);
-			}
-			fprintf(opinion_matrix_file_final, "\n");
-		}
-		fclose(opinion_matrix_file_final);
-	}
-
-}
-
 
 int main(){
 
 	srand(time(NULL));
 
-	//set parameters
-	int c = 2; //number of communities
-	int k = 4; //number of vertices within each community
-	double p = 0.8; //probability of an edge between members of the same community
-	double q = 0.04; //probability of an edge between members of different communities
+	int c = 4; //number of communities
+	int k = 12; //number of vertices within each community
+	double p = 0.78; //probability of an edge between members of the same community
+	double q = 0.06; //probability of an edge between members of different communities
 	int n = c*k; //total number of vertices
 	int opinions = c; //total number of opinions in the system
 	int rewire_strength = 1; //rewire_strength will always be set to 1
+
+	FILE *meta;
+	meta = fopen("meta", "a");
+	fprintf(meta, "%d %d %d %f %f %d ", c, k, n, p, q, opinions);
+	fclose(meta);
 
 	//allocate memory for adjacency matrix
 	int** adj_matrix = (int**)malloc(n * sizeof(int*));
@@ -524,41 +390,10 @@ int main(){
 		}
 	}
 
-	FILE *meta;
-	meta = fopen("meta", "w");
-	fprintf(meta, "c = %d\n", c);
-	fprintf(meta, "k = %d\n", k);
-	fprintf(meta, "p = %f\n", p);
-	fprintf(meta, "q = %f\n", q);
-	fprintf(meta, "n = %d\n", n);
-	fprintf(meta, "opinions = %d\n", opinions);
-	fprintf(meta, "rewire_strength = %d\n", rewire_strength);
-	fclose(meta);
-
-	//FILE *adj_matrix_file_initial;
-	//adj_matrix_file_initial = fopen("adj_matrix_initial", "w");
-	//fprintf(adj_matrix_file_initial, "%d\n", n);
-	//fclose(adj_matrix_file_initial);
-
-	//FILE *opinion_matrix_file_initial;
-	//opinion_matrix_file_initial = fopen("opinion_matrix_initial", "w");
-	//fprintf(opinion_matrix_file_initial, "%d\n", n);
-	//fprintf(opinion_matrix_file_initial, "%d\n", opinions);
-	//fclose(opinion_matrix_file_initial);
-
-	//FILE *adj_matrix_file_final;
-	//adj_matrix_file_final = fopen("adj_matrix_final", "w");
-	//fprintf(adj_matrix_file_final, "%d\n", n);
-	//fclose(adj_matrix_file_final);
-
-	//FILE *opinion_matrix_file_final;
-	//opinion_matrix_file_final = fopen("opinion_matrix_final", "w");
-	//fprintf(opinion_matrix_file_final, "%d\n", n);
-	//fprintf(opinion_matrix_file_final, "%d\n", opinions);
-	//fclose(opinion_matrix_file_final);
-
+	//initialize network and opinions
 	init(c, k, n, p, q, opinions, &adj_matrix, &opinion_matrix);
 
+	//play the naming game
 	ng(c, k, n, opinions, &adj_matrix, &opinion_matrix, rewire_strength);
 
 	//free memory
