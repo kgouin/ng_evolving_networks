@@ -21,7 +21,8 @@ void init(int c, int k, int n, double p, double q, int opinions, int*** adj_matr
 
 	int num_cross_connections = 0;
 	int num_within_connections = 0;
-	int opinion_divergence = 0;
+	int opinion_divergence = -1; //keeping this here for simplicity
+	//this is irrelevant now that we don't manually set the initial opinions
 
 	//create planted partition adjacency matrix
 	for (int i = 0; i < n; i+=k){ //for each community
@@ -49,17 +50,6 @@ void init(int c, int k, int n, double p, double q, int opinions, int*** adj_matr
 						(*adj_matrix)[m][j] = 0;
 					}
 				}
-			}
-			//set & encode opinions
-			if (((double)rand()/(double)(RAND_MAX)) < p){
-				(*opinion_matrix)[j][0] = i/k;
-			}
-			else{
-				(*opinion_matrix)[j][0] = i/k;
-				while ((*opinion_matrix)[j][0] == i/k){ //so that the opinion is NOT i/k
-					(*opinion_matrix)[j][0] = rand() % opinions;
-				}
-				opinion_divergence++;
 			}
 		}
 	}
@@ -115,6 +105,7 @@ void ng(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion_mat
 		}
 
 		//speaker selects a random opinion from its set of opinions
+		//if set of opinions is empty, make up an opinion (i.e. a random int)
 		int speaker_num_ops = 0;
 		int hearer_num_ops = 0;
 		for (int i = 0; i < opinions; i++){
@@ -126,6 +117,17 @@ void ng(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion_mat
 			}
 			if ((*opinion_matrix)[speaker][i] == -1 && (*opinion_matrix)[hearer][i] == -1) break;
 			//opinions are arranged from left to right. if we hit a -1 then all subsequent opinions are -1
+		}
+
+		if (speaker_num_ops == 0){ //if speaker has no opinion
+			(*opinion_matrix)[speaker][0] = rand(); //make one up and add it to its set of opinions
+			/*
+			here we could either assume that the number of possible opinions is so large that
+			the probability of randomly selecting the same opinion twice (or more) is negligible
+			or we could loop through all opinions in the system to make sure the new one is unique
+			*/
+			//could we potentially choose an opinion from 0 to c-1 ????
+			speaker_num_ops = 1; //number of opinions for speaker is now 1
 		}
 
 		int op = (*opinion_matrix)[speaker][rand() % speaker_num_ops]; //select random opinion from non-negative opinions
@@ -170,7 +172,6 @@ void ng(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion_mat
 	meta = fopen("meta", "a");
 	fprintf(meta, "%d %d %d %d %d %d\n", num_components(n, adj_matrix, 1), num_successful, num_unsuccessful, timestep-num_successful-num_unsuccessful, num_opinions(n, opinions, opinion_matrix), timestep);
 	fclose(meta);
-
 }
 
 void rewire(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion_matrix, int rewire_strength){
@@ -260,7 +261,6 @@ void rewire(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion
 }
 
 int is_game_over(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion_matrix, int rewire_strength){
-
 	//the game is over if:
 	//for every vertex with at least one neighbour (i.e. this doesn't apply to disconnected vertices)
 	//that vertex has to have a single opinion AND
@@ -269,8 +269,9 @@ int is_game_over(int c, int k, int n, int opinions, int*** adj_matrix, int*** op
 	for (int i = 0; i < n; i++){ //for every vertex
 		for (int j = 0; j < n; j++){ //for every potential neighbour of vertex
 			if ((*adj_matrix)[i][j] == 1){ //if they are neighbours
-				if (((*opinion_matrix)[i][0] != (*opinion_matrix)[j][0]) || ((*opinion_matrix)[i][1] != -1 || (*opinion_matrix)[j][1] != -1)){
+				if (((*opinion_matrix)[i][0] != (*opinion_matrix)[j][0]) || ((*opinion_matrix)[i][0] == -1 || (*opinion_matrix)[j][0] == 0) || ((*opinion_matrix)[i][1] != -1 || (*opinion_matrix)[j][1] != -1)){
 					//if opinions of vertex i and j are the not the same OR
+					//if someone has zero opinions OR
 					//if someone has more than one opinion (which are alway arranged from left to right)
 					//then the game is not over
 					return 0;
@@ -339,22 +340,28 @@ void DFS(int n, int v, int** visited, int*** adj_matrix){
 
 int num_opinions(int n, int opinions, int*** opinion_matrix){
 
-	int* ops = (int*)calloc(opinions, sizeof(int));
+	int* ops = (int*)malloc(opinions * sizeof(int));
 
-	for (int i = 0; i < n; i++){
-		ops[(*opinion_matrix)[i][0]]++;
-	}
+	int index = 0;
+	int dont_add;
 
-	int num_ops = 0;
-	for (int i = 0; i < opinions; i++){
-		if (ops[i] > 0){
-			num_ops++;
+	for (int i = 0; i < n; i++){ //for each vertex
+		dont_add = 0;
+		for (int j = 0; j < opinions; j++){ //for each unique opinion stored in ops
+			if ((*opinion_matrix)[i][0] == ops[j]){ //if vertex i's opinion is already in the list
+				dont_add = 1;
+				break;
+			}
+		}
+		if (!dont_add){
+			ops[index] = (*opinion_matrix)[i][0];
+			index++;
 		}
 	}
 
 	free(ops);
 
-	return num_ops;
+	return index;
 
 }
 
@@ -364,10 +371,10 @@ int main(){
 
 	int c = 4; //number of communities
 	int k = 12; //number of vertices within each community
-	double p = 0.78; //probability of an edge between members of the same community
-	double q = 0.06; //probability of an edge between members of different communities
+	double p = 0.82; //probability of an edge between members of the same community
+	double q = 0.02; //probability of an edge between members of different communities
 	int n = c*k; //total number of vertices
-	int opinions = c; //total number of opinions in the system
+	int opinions = n; //maximum number of opinions in the system
 	int rewire_strength = 1; //rewire_strength will always be set to 1
 
 	FILE *meta;
@@ -390,7 +397,7 @@ int main(){
 		}
 	}
 
-	//initialize network and opinions
+	//initialize network
 	init(c, k, n, p, q, opinions, &adj_matrix, &opinion_matrix);
 
 	//play the naming game
