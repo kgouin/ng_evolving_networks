@@ -375,10 +375,6 @@ int num_opinions(int n, int opinions, int*** opinion_matrix){
 
 int main(int argc, char **argv){ // ./main c k p q signature
 
-	if (strlen(argv[0]) < argc || strlen(argv[0]) > argc){
-		exit(0);
-	}
-
 	srand(time(NULL));
 
 	int c = atoi(argv[1]); //number of communities
