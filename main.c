@@ -1,13 +1,14 @@
 #include<stdio.h>
 #include<stdlib.h>
+#include<string.h>
 #include <time.h>
 #include <sys/time.h>
 
-void init(int, int, int, double, double, int, int***, int***);
-void ng(int, int, int, int, int***, int***, int);
+int init(int, int, int, double, double, int, int***, int***, char*, char*);
+void ng(int, int, int, double, double, int, int***, int***, int, char*, char*);
 void rewire(int, int, int, int, int***, int***, int);
 int is_game_over(int, int, int, int, int***, int***, int);
-int num_components(int, int***, int);
+int num_components(int, int, int, double, double, int***, int, char*);
 void DFS(int, int, int**, int***);
 int num_opinions(int, int, int***);
 
@@ -17,7 +18,7 @@ int num_opinions(int, int, int***);
 //different communities share an edge with probability q. Here we want
 //an assortative model where p > q.
 
-void init(int c, int k, int n, double p, double q, int opinions, int*** adj_matrix, int*** opinion_matrix){
+int init(int c, int k, int n, double p, double q, int opinions, int*** adj_matrix, int*** opinion_matrix, char* meta_fname, char* extra_fname){
 
 	int num_cross_connections = 0;
 	int num_within_connections = 0;
@@ -54,14 +55,21 @@ void init(int c, int k, int n, double p, double q, int opinions, int*** adj_matr
 		}
 	}
 
+	//check whether graph is connected i.e. has only one component
+	if (num_components(c, k, n, p, q, adj_matrix, 0, extra_fname) > 1){
+		return 0;
+	}
+
 	FILE *meta;
-	meta = fopen("meta", "a");
-	fprintf(meta, "%d %f %f %f ", num_components(n, adj_matrix, 0), ((float)(num_cross_connections))/c, ((float)(num_within_connections))/c, ((float)(opinion_divergence))/c);
+	meta = fopen(meta_fname, "a");
+	fprintf(meta, "%d %f %f %f ", num_components(c, k, n, p, q, adj_matrix, 0, extra_fname), ((float)(num_cross_connections))/c, ((float)(num_within_connections))/c, ((float)(opinion_divergence))/c);
 	fclose(meta);
+
+	return 1;
 
 }
 
-void ng(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion_matrix, int rewire_strength){
+void ng(int c, int k, int n, double p, double q, int opinions, int*** adj_matrix, int*** opinion_matrix, int rewire_strength, char* meta_fname, char* extra_fname){
 
 	int timestep = 0;
 	int num_successful = 0;
@@ -169,8 +177,8 @@ void ng(int c, int k, int n, int opinions, int*** adj_matrix, int*** opinion_mat
 	}
 
 	FILE *meta;
-	meta = fopen("meta", "a");
-	fprintf(meta, "%d %d %d %d %d %d\n", num_components(n, adj_matrix, 1), num_successful, num_unsuccessful, timestep-num_successful-num_unsuccessful, num_opinions(n, opinions, opinion_matrix), timestep);
+	meta = fopen(meta_fname, "a");
+	fprintf(meta, "%d %d %d %d %d %d\n", num_components(c, k, n, p, q, adj_matrix, 1, extra_fname), num_successful, num_unsuccessful, timestep-num_successful-num_unsuccessful, num_opinions(n, opinions, opinion_matrix), timestep);
 	fclose(meta);
 }
 
@@ -269,7 +277,7 @@ int is_game_over(int c, int k, int n, int opinions, int*** adj_matrix, int*** op
 	for (int i = 0; i < n; i++){ //for every vertex
 		for (int j = 0; j < n; j++){ //for every potential neighbour of vertex
 			if ((*adj_matrix)[i][j] == 1){ //if they are neighbours
-				if (((*opinion_matrix)[i][0] != (*opinion_matrix)[j][0]) || ((*opinion_matrix)[i][0] == -1 || (*opinion_matrix)[j][0] == 0) || ((*opinion_matrix)[i][1] != -1 || (*opinion_matrix)[j][1] != -1)){
+				if (((*opinion_matrix)[i][0] != (*opinion_matrix)[j][0]) || ((*opinion_matrix)[i][0] == -1 || (*opinion_matrix)[j][0] == -1) || ((*opinion_matrix)[i][1] != -1 || (*opinion_matrix)[j][1] != -1)){
 					//if opinions of vertex i and j are the not the same OR
 					//if someone has zero opinions OR
 					//if someone has more than one opinion (which are alway arranged from left to right)
@@ -285,7 +293,7 @@ int is_game_over(int c, int k, int n, int opinions, int*** adj_matrix, int*** op
 
 }
 
-int num_components(int n, int*** adj_matrix, int is_final){
+int num_components(int c, int k, int n, double p, double q, int*** adj_matrix, int is_final, char* extra_fname){
 
 	int* visited = (int*)malloc(n * sizeof(int)); //create visited array
 	for (int i = 0; i < n; i++){ //set all slots to false
@@ -306,7 +314,7 @@ int num_components(int n, int*** adj_matrix, int is_final){
 				}
 			}
 			FILE *extra;
-			extra = fopen("extra", "a");
+			extra = fopen(extra_fname, "a");
 			fprintf(extra, "%d ", component_size-prev_component_size);
 			fclose(extra);
 			prev_component_size = component_size;
@@ -316,7 +324,7 @@ int num_components(int n, int*** adj_matrix, int is_final){
 
 	if (is_final){
 		FILE *extra;
-		extra = fopen("extra", "a");
+		extra = fopen(extra_fname, "a");
 		fprintf(extra, "\n");
 		fclose(extra);
 	}
@@ -365,20 +373,34 @@ int num_opinions(int n, int opinions, int*** opinion_matrix){
 
 }
 
-int main(){
+int main(int argc, char **argv){ // ./main c k p q signature
+
+	if (strlen(argv[0]) < argc || strlen(argv[0]) > argc){
+		exit(0);
+	}
 
 	srand(time(NULL));
 
-	int c = 4; //number of communities
-	int k = 12; //number of vertices within each community
-	double p = 0.82; //probability of an edge between members of the same community
-	double q = 0.02; //probability of an edge between members of different communities
+	int c = atoi(argv[1]); //number of communities
+	int k = atoi(argv[2]); //number of vertices within each community
+	double p = atof(argv[3]); //probability of an edge between members of the same community
+	double q = atof(argv[4]); //probability of an edge between members of different communities
 	int n = c*k; //total number of vertices
 	int opinions = n; //maximum number of opinions in the system
 	int rewire_strength = 1; //rewire_strength will always be set to 1
 
+	char* signature = argv[5];
+	int max_length = 400;
+	char meta_fname[max_length];
+	char extra_fname[max_length];
+	char log_fname[max_length];
+
+	sprintf(meta_fname, "meta_%s", signature); //store unique meta name in variable fname
+	sprintf(extra_fname, "extra_%s", signature); //store unique extra name in variable fname
+	sprintf(log_fname, "log_%s", signature); //store unique log name in variable fname
+
 	FILE *meta;
-	meta = fopen("meta", "a");
+	meta = fopen(meta_fname, "a");
 	fprintf(meta, "%d %d %d %f %f %d ", c, k, n, p, q, opinions);
 	fclose(meta);
 
@@ -398,10 +420,18 @@ int main(){
 	}
 
 	//initialize network
-	init(c, k, n, p, q, opinions, &adj_matrix, &opinion_matrix);
+	FILE *my_log;
+	my_log = fopen(log_fname, "a");
+
+	int connected_network = init(c, k, n, p, q, opinions, &adj_matrix, &opinion_matrix, meta_fname, extra_fname);
+	while (!connected_network){
+		fprintf(my_log, "network initialization failed\n");
+		connected_network = init(c, k, n, p, q, opinions, &adj_matrix, &opinion_matrix, meta_fname, extra_fname);
+	}
+	fclose(my_log);
 
 	//play the naming game
-	ng(c, k, n, opinions, &adj_matrix, &opinion_matrix, rewire_strength);
+	ng(c, k, n, p, q, opinions, &adj_matrix, &opinion_matrix, rewire_strength, meta_fname, extra_fname);
 
 	//free memory
 	for (int i = 0; i < n; i++){
